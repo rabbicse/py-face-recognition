@@ -88,7 +88,8 @@ class FaceRecognizer:
 
     def __extract_landmarks(self, train_image, detected_face):
         # Get the landmarks/parts for the face in box d.
-        shape = self.__shape_predictor_5_point(train_image, detected_face)
+        # shape = self.__shape_predictor_5_point(train_image, detected_face)
+        shape = self.__shape_predictor_68_point(train_image, detected_face)
 
         # Let's generate the aligned image using get_face_chip
         face_chip = dlib.get_face_chip(train_image, shape)
