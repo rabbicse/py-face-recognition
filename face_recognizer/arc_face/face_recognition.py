@@ -39,9 +39,10 @@ class FaceRecognition:
 
     def get_embedding(self, img):
         assert self.param_file and self.model
-        assert img.shape[2]==3 and img.shape[0:2]==self.image_size
-        data = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        data = np.transpose(data, (2,0,1))
+        # assert img.shape[2]==3 and img.shape[0:2]==self.image_size
+        # data = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        # data = np.transpose(data, (2,0,1))
+        data = np.transpose(img, (2, 0, 1))
         data = np.expand_dims(data, axis=0)
         data = mx.nd.array(data)
         db = mx.io.DataBatch(data=(data,))

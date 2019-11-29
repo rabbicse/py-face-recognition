@@ -94,6 +94,7 @@ class FaceDetector:
             for i in range(faces.shape[0]):
                 # print('score', faces[i][4])
                 box = faces[i].astype(np.int)
+                print(landmarks[i])
 
                 # append to list
                 x1,y1,x2,y2 = box[0], box[1], box[2], box[3]
@@ -184,7 +185,7 @@ def recognize_images():
     # # read image from file
     # img = cv2.imread('test_data/rahat1.jpg')
     # img = imutils.resize(img, 112, 112)
-    # fr = FaceRecognizer()
+    fr = FaceRecognizer()
     # fr.process_img(img)
     # return
     with FaceDetector() as face_rec:
@@ -195,9 +196,13 @@ def recognize_images():
         for im in test_images:
             faces = face_rec.process_images(im)
             for f in faces:
-                cv2.imshow('Crop Image', f)
+                # cv2.imshow('Crop Image', f)
                 # Hit 'q' on the keyboard to quit!
-                cv2.waitKey(0)
+                # cv2.waitKey(0)
+                rimg = cv2.resize(f, (112, 112))
+                # rimg = imutils.resize(f, 112, 112)
+                print(rimg.shape)
+                fr.process_img(rimg)
             break
 
         # with ThreadPool(1) as pool:
