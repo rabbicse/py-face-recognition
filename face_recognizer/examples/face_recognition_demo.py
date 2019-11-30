@@ -56,19 +56,34 @@ class FaceDetector:
     thresh = 0.8
     scales = [1280, 1920]
     retina_face_model = os.path.abspath('models/retinaface-R50/R50')
-    face_detector = RetinaFace(retina_face_model, 0, 0, 'net3')
+    arc_face_model = os.path.abspath('models/model-r100-arcface-ms1m-refine-v2/model-r100-ii/model-0000')
 
     def __init__(self):
-        pass
+        self.__embeddings = []
 
     def __enter__(self):
+        self.face_detector = RetinaFace(self.retina_face_model, 0, 0, 'net3')
+        self.recognizer = FaceRecognition(self.arc_face_model)
+        self.recognizer.prepare(0)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
+        del self.recognizer
+        del self.face_detector
+
+    def init_embeddings(self, img_path):
+        train_images = []
+        for f in glob.glob('{}/*.jpg'.format(img_path)):
+            train_images.append(f)
+
+        for im_path in train_images:
+            img = cv2.imread(im_path)
+            img = cv2.resize(img, (112, 112))
+            emb = self.recognizer.get_embedding(img, rgb_convert=True)
+            v = im_path.split('/')[-1].replace('.jpg', '')
+            self.__embeddings.append((emb, v))
 
     def process_images(self, image_path):
-        face_list = []
         # read image from file
         img = cv2.imread(image_path)
 
@@ -94,15 +109,25 @@ class FaceDetector:
             for i in range(faces.shape[0]):
                 # print('score', faces[i][4])
                 box = faces[i].astype(np.int)
-                print(landmarks[i])
 
-                # append to list
-                x1,y1,x2,y2 = box[0], box[1], box[2], box[3]
+                x1, y1, x2, y2 = box[0], box[1], box[2], box[3]
                 ch = y2 - y1
                 cw = x2 - x1
                 org_img = img.copy()
                 crop_img = org_img[y1:y1 + ch, x1:x1 + cw]
-                face_list.append(crop_img)
+
+                # face_list.append(crop_img)
+                rimg = cv2.resize(crop_img, (112, 112))
+                # rimg = imutils.resize(f, 112, 112)
+                emb = self.recognizer.get_embedding(rimg)
+                r = self.recognizer.compute_match(emb, emb)
+                print('R: {}'.format(r))
+
+                results = [(self.recognizer.compute_match(emb, c[0]), c[1]) for c in self.__embeddings]
+                print(results)
+                # index = np.argmin([d[0] for d in distances])
+                # dis = distances[index]
+
 
                 # color = (255,0,0)
                 color = (0, 0, 255)
@@ -121,8 +146,6 @@ class FaceDetector:
 
         # Hit 'q' on the keyboard to quit!
         cv2.waitKey(0)
-
-        return face_list
 
     def process_frames(self, img):
         # get image shape
@@ -162,47 +185,22 @@ class FaceDetector:
             cv2.imshow('Images', img)
 
 
-class FaceRecognizer:
-    arc_face_model = os.path.abspath('models/model-r100-arcface-ms1m-refine-v2/model-r100-ii/model-0000')
-    recognizer = FaceRecognition(arc_face_model)
-
-    def __init__(self):
-        self.recognizer.prepare(0)
-
-    def process_img(self, img):
-        emb1 = self.recognizer.get_embedding(img)
-        print(emb1)
-
-        emb2 = self.recognizer.get_embedding(img)
-        print(emb2)
-
-        score = self.recognizer.compute_sim(img, img)
-        print(score)
-
-
 @timeit
 def recognize_images():
     # # read image from file
     # img = cv2.imread('test_data/rahat1.jpg')
     # img = imutils.resize(img, 112, 112)
-    fr = FaceRecognizer()
+    # fr = FaceRecognizer()
     # fr.process_img(img)
     # return
     with FaceDetector() as face_rec:
+        face_rec.init_embeddings('train_data/')
         test_images = []
         for f in glob.glob('test_data/*.jpg'):
             test_images.append(f)
 
         for im in test_images:
-            faces = face_rec.process_images(im)
-            for f in faces:
-                # cv2.imshow('Crop Image', f)
-                # Hit 'q' on the keyboard to quit!
-                # cv2.waitKey(0)
-                rimg = cv2.resize(f, (112, 112))
-                # rimg = imutils.resize(f, 112, 112)
-                print(rimg.shape)
-                fr.process_img(rimg)
+            face_rec.process_images(im)
             break
 
         # with ThreadPool(1) as pool:
