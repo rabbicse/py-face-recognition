@@ -14,7 +14,7 @@ from arc_face.face_recognition import FaceRecognition
 # detector = RetinaFace(retina_face_model, 0, 0, 'net3')
 
 # test_img = './test_data/weeding.jpg'
-
+from arc_face import preprocessor
 
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 
@@ -78,8 +78,32 @@ class FaceDetector:
 
         for im_path in train_images:
             img = cv2.imread(im_path)
+            # get image shape
+            im_shape = img.shape
+
+            target_size, max_size = self.scales
+            im_size_min = np.min(im_shape[0:2])
+            im_size_max = np.max(im_shape[0:2])
+
+            # if im_size_min>target_size or im_size_max>max_size:
+            im_scale = float(target_size) / float(im_size_min)
+            faces, landmarks = self.face_detector.detect(img, self.thresh, scales=[im_scale], do_flip=False)
+            box = faces[0].astype(np.int)
+
+            x1, y1, x2, y2 = box[0], box[1], box[2], box[3]
+            ch = y2 - y1
+            cw = x2 - x1
+            org_img = img.copy()
+            crop_img = org_img[y1:y1 + ch, x1:x1 + cw]
+
+            img = preprocessor.preprocess(crop_img)
+
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             img = cv2.resize(img, (112, 112))
-            emb = self.recognizer.get_embedding(img, rgb_convert=True)
+            landmark5 = landmarks[0].astype(np.int)
+            emb = self.recognizer.get_embedding(img)
+            # emb = self.recognizer.get(img, landmark5)
+
             v = im_path.split('/')[-1].replace('.jpg', '')
             self.__embeddings.append((emb, v))
 
@@ -116,17 +140,16 @@ class FaceDetector:
                 org_img = img.copy()
                 crop_img = org_img[y1:y1 + ch, x1:x1 + cw]
 
-                # face_list.append(crop_img)
-                rimg = cv2.resize(crop_img, (112, 112))
-                # rimg = imutils.resize(f, 112, 112)
-                emb = self.recognizer.get_embedding(rimg)
-                r = self.recognizer.compute_match(emb, emb)
-                print('R: {}'.format(r))
+                # cv2.imshow('Images', crop_img)
 
-                results = [(self.recognizer.compute_match(emb, c[0]), c[1]) for c in self.__embeddings]
-                print(results)
-                # index = np.argmin([d[0] for d in distances])
-                # dis = distances[index]
+                # Hit 'q' on the keyboard to quit!
+                # cv2.waitKey(0)
+
+                # face_list.append(crop_img)
+                crop_img = cv2.cvtColor(crop_img, cv2.COLOR_BGR2RGB)
+                rimg = preprocessor.preprocess(crop_img)
+                rimg = cv2.resize(rimg, (112, 112))
+
 
 
                 # color = (255,0,0)
@@ -134,6 +157,21 @@ class FaceDetector:
                 cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), color, 2)
                 if landmarks is not None:
                     landmark5 = landmarks[i].astype(np.int)
+
+                    emb = self.recognizer.get_embedding(rimg)
+
+                    r = self.recognizer.compute_match(emb, emb)
+                    print('R: {}'.format(r))
+
+                    results = [(self.recognizer.compute_match(emb, c[0]), c[1]) for c in self.__embeddings]
+                    print(results)
+                    index = np.argmax([d[0] for d in results])
+                    dis = results[index]
+                    print(dis)
+                    cv2.putText(img, dis[1], (x1, y1), FONT, 0.55, (255, 255, 255), 1)
+
+
+
                     # print(landmark.shape)
                     for l in range(landmark5.shape[0]):
                         color = (0, 0, 255)
@@ -201,7 +239,7 @@ def recognize_images():
 
         for im in test_images:
             face_rec.process_images(im)
-            break
+            # break
 
         # with ThreadPool(1) as pool:
         #     pool.map(face_rec.process_images, test_images)
