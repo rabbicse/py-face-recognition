@@ -45,25 +45,14 @@ def read_image(img_path, **kwargs):
     return img
 
 
-def preprocess(img, bbox=None, landmark=None, **kwargs):
+def preprocess(img, bbox=None, landmark=None, image_size=(112,112), **kwargs):
     '''
     Preprocess input image - returns aligned face images
     '''
-    if isinstance(img, str):
-        img = read_image(img, **kwargs)
     M = None
-    image_size = []
-    str_image_size = kwargs.get('image_size', '')
-    # Assert input image shape
-    if len(str_image_size) > 0:
-        image_size = [int(x) for x in str_image_size.split(',')]
-        if len(image_size) == 1:
-            image_size = [image_size[0], image_size[0]]
-        assert len(image_size) == 2
-        assert image_size[0] == 112
-        assert image_size[0] == 112 or image_size[1] == 96
-    # Do alignment using landmnark points
     if landmark is not None:
+        assert landmark.shape[0] == 68 or landmark.shape[0] == 5
+        assert landmark.shape[1] == 2
         assert len(image_size) == 2
         src = np.array([
             [30.2946, 51.6963],
@@ -73,11 +62,14 @@ def preprocess(img, bbox=None, landmark=None, **kwargs):
             [62.7299, 92.2041]], dtype=np.float32)
         if image_size[1] == 112:
             src[:, 0] += 8.0
-        dst = landmark.astype(np.float32)
+        dst = landmark#.astype(np.float32)
 
         tform = trans.SimilarityTransform()
         tform.estimate(dst, src)
         M = tform.params[0:2, :]
+        warped = cv2.warpAffine(img, M, (image_size[1], image_size[0]), borderValue=0.0)
+
+        return warped
 
     # If no landmark points available, do alignment using bounding box. If no bounding box available use center crop
     if M is None:

@@ -34,7 +34,7 @@ def timeit(method):
     return timed
 
 
-def drawText(image, text):
+def drawText(image, text, x1, y1):
     font_scale = 0.55
     margin = 5
     thickness = 2
@@ -49,7 +49,7 @@ def drawText(image, text):
     x = image.shape[1] - margin - text_width
     y = margin + size[0][1] + line_height
 
-    cv2.putText(image, text, (x, y), FONT, font_scale, color, thickness)
+    cv2.putText(image, text, (x1, y1), FONT, font_scale, color, thickness)
 
 
 class FaceDetector:
@@ -77,7 +77,41 @@ class FaceDetector:
             train_images.append(f)
 
         for im_path in train_images:
+            # read image from file
             img = cv2.imread(im_path)
+
+            # detect faces
+            faces, landmarks = self.pre_process_img(img)
+
+            # extract rect and landmark=5
+            box = faces[0].astype(np.int)
+            landmark5 = landmarks[0].astype(np.float32)
+
+
+            # x1, y1, x2, y2 = box[0], box[1], box[2], box[3]
+            # ch = y2 - y1
+            # cw = x2 - x1
+            # org_img = img.copy()
+            # crop_img = org_img[y1:y1 + ch, x1:x1 + cw]
+            # cv2.imshow('Crop', crop_img)
+            # cv2.waitKey(0)
+            #
+            #
+            # crop_img = cv2.cvtColor(crop_img, cv2.COLOR_BGR2RGB)
+            # crop_img = cv2.resize(crop_img, (112, 112))
+            # # crop_img = preprocessor.preprocess(crop_img, landmark=landmark5, image_size=[112,112])
+            # crop_img = preprocessor.preprocess(crop_img, image_size=[112, 112])
+
+            # preprocess face before get embeddings
+            crop_img = self.pre_process_face(img, box, landmark5)
+            emb = self.recognizer.get_embedding(crop_img)
+            # emb = self.recognizer.get(crop_img, landmark5)
+
+            v = im_path.split('/')[-1].replace('.jpg', '')
+            self.__embeddings.append((emb, v))
+
+    def pre_process_img(self, img):
+        try:
             # get image shape
             im_shape = img.shape
 
@@ -87,46 +121,100 @@ class FaceDetector:
 
             # if im_size_min>target_size or im_size_max>max_size:
             im_scale = float(target_size) / float(im_size_min)
+            # prevent bigger axis from being more than max_size:
+            if np.round(im_scale * im_size_max) > max_size:
+                im_scale = float(max_size) / float(im_size_max)
+
+            print('im_scale', im_scale)
             faces, landmarks = self.face_detector.detect(img, self.thresh, scales=[im_scale], do_flip=False)
-            box = faces[0].astype(np.int)
+
+            return faces, landmarks
+        except:
+            pass
+
+    def pre_process_face(self, img, box, landmark5):
+        try:
 
             x1, y1, x2, y2 = box[0], box[1], box[2], box[3]
+
             ch = y2 - y1
             cw = x2 - x1
-            org_img = img.copy()
-            crop_img = org_img[y1:y1 + ch, x1:x1 + cw]
+            margin = 0
+            bb = np.zeros(4, dtype=np.int32)
+            bb[0] = np.maximum(x1 - margin / 2, 0)
+            bb[1] = np.maximum(y1 - margin / 2, 0)
+            bb[2] = np.minimum(x2 + margin / 2, img.shape[1])
+            bb[3] = np.minimum(y2 + margin / 2, img.shape[0])
+            # ret = img[bb[1]:bb[3], bb[0]:bb[2], :]
+            ret = img[bb[1]:bb[3], bb[0]:bb[2], :]
 
-            img = preprocessor.preprocess(crop_img)
 
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            img = cv2.resize(img, (112, 112))
-            landmark5 = landmarks[0].astype(np.int)
-            emb = self.recognizer.get_embedding(img)
-            # emb = self.recognizer.get(img, landmark5)
+            cv2.imshow('Images', ret)
 
-            v = im_path.split('/')[-1].replace('.jpg', '')
-            self.__embeddings.append((emb, v))
+            # Hit 'q' on the keyboard to quit!
+            cv2.waitKey(0)
+
+            lan = [[l[0] - bb[0], l[1] - bb[1]] for l in landmark5]
+            ln = np.array(lan, dtype=np.float32)
+            # print(lan)
+
+
+
+            # wr = ret.copy()
+            # # for l in range(landmark5.shape[0]):
+            # for l in range(ln.shape[0]):
+            #     color = (0, 0, 255)
+            #     if l == 0 or l == 3:
+            #         color = (0, 255, 0)
+            #     # cv2.circle(wr, (landmark5[l][0], landmark5[l][1]), 1, color, 2)
+            #     cv2.circle(wr, (ln[l][0], ln[l][1]), 1, color, 2)
+
+
+
+
+
+            # cv2.imshow('Images', wr)
+
+            # Hit 'q' on the keyboard to quit!
+            # cv2.waitKey(0)
+
+
+            crop_img = preprocessor.preprocess(ret, image_size=[112, 112], landmark=ln)
+            crop_img = cv2.cvtColor(crop_img, cv2.COLOR_BGR2RGB)
+            # crop_img = cv2.resize(crop_img, (112, 112))
+
+            cv2.imshow('Images', crop_img)
+
+            # Hit 'q' on the keyboard to quit!
+            cv2.waitKey(0)
+
+
+            return crop_img
+        except Exception as x:
+            print(x)
 
     def process_images(self, image_path):
         # read image from file
         img = cv2.imread(image_path)
+        orig_img = img.copy()
 
-        # get image shape
-        im_shape = img.shape
+        # # get image shape
+        # im_shape = img.shape
+        #
+        # target_size, max_size = self.scales
+        # im_size_min = np.min(im_shape[0:2])
+        # im_size_max = np.max(im_shape[0:2])
+        #
+        # # if im_size_min>target_size or im_size_max>max_size:
+        # im_scale = float(target_size) / float(im_size_min)
+        # # prevent bigger axis from being more than max_size:
+        # if np.round(im_scale * im_size_max) > max_size:
+        #     im_scale = float(max_size) / float(im_size_max)
+        #
+        # print('im_scale', im_scale)
 
-        target_size, max_size = self.scales
-        im_size_min = np.min(im_shape[0:2])
-        im_size_max = np.max(im_shape[0:2])
-
-        # if im_size_min>target_size or im_size_max>max_size:
-        im_scale = float(target_size) / float(im_size_min)
-        # prevent bigger axis from being more than max_size:
-        if np.round(im_scale * im_size_max) > max_size:
-            im_scale = float(max_size) / float(im_size_max)
-
-        print('im_scale', im_scale)
-
-        faces, landmarks = self.face_detector.detect(img, self.thresh, scales=[im_scale], do_flip=False)
+        # faces, landmarks = self.face_detector.detect(img, self.thresh, scales=[im_scale], do_flip=False)
+        faces, landmarks = self.pre_process_img(img)
 
         if faces.any():
             print('find', faces.shape[0], 'faces')
@@ -137,50 +225,70 @@ class FaceDetector:
                 x1, y1, x2, y2 = box[0], box[1], box[2], box[3]
                 ch = y2 - y1
                 cw = x2 - x1
-                org_img = img.copy()
-                crop_img = org_img[y1:y1 + ch, x1:x1 + cw]
+                # org_img = img.copy()
+                # crop_img = org_img[y1:y1 + ch, x1:x1 + cw]
+                #
+                # # cv2.imshow('Images', crop_img)
+                #
+                # # Hit 'q' on the keyboard to quit!
+                # # cv2.waitKey(0)
+                #
+                # # face_list.append(crop_img)
+                # crop_img = cv2.cvtColor(crop_img, cv2.COLOR_BGR2RGB)
+                # rimg = cv2.resize(crop_img, (112, 112))
 
-                # cv2.imshow('Images', crop_img)
-
-                # Hit 'q' on the keyboard to quit!
-                # cv2.waitKey(0)
-
-                # face_list.append(crop_img)
-                crop_img = cv2.cvtColor(crop_img, cv2.COLOR_BGR2RGB)
-                rimg = preprocessor.preprocess(crop_img)
-                rimg = cv2.resize(rimg, (112, 112))
-
+                landmark5 = landmarks[i].astype(np.float32)
+                crop_img = self.pre_process_face(img, box, landmark5)
 
 
                 # color = (255,0,0)
                 color = (0, 0, 255)
                 cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), color, 2)
-                if landmarks is not None:
-                    landmark5 = landmarks[i].astype(np.int)
 
-                    emb = self.recognizer.get_embedding(rimg)
+                landmark5 = landmarks[i].astype(np.int)
+                emb = self.recognizer.get_embedding(crop_img)
 
-                    r = self.recognizer.compute_match(emb, emb)
-                    print('R: {}'.format(r))
+                results = [(self.recognizer.compute_match(emb, c[0]), c[1]) for c in self.__embeddings]
+                index = np.argmax([d[0] for d in results])
+                dis = results[index]
+                print(dis)
+                # # cv2.putText(img, dis[1], (x1, y1), FONT, 0.55, (255, 255, 255), 2)
+                # drawText(img, '{} - {:.2f} %'.format(dis[1], dis[0] * 100), x1, y1)
 
-                    results = [(self.recognizer.compute_match(emb, c[0]), c[1]) for c in self.__embeddings]
-                    print(results)
-                    index = np.argmax([d[0] for d in results])
-                    dis = results[index]
-                    print(dis)
-                    cv2.putText(img, dis[1], (x1, y1), FONT, 0.55, (255, 255, 255), 1)
-
+                # if dis[0] >= 0.5:
+                #     continue
 
 
-                    # print(landmark.shape)
-                    for l in range(landmark5.shape[0]):
-                        color = (0, 0, 255)
-                        if l == 0 or l == 3:
-                            color = (0, 255, 0)
-                        cv2.circle(img, (landmark5[l][0], landmark5[l][1]), 1, color, 2)
 
-        cv2.imwrite('output_data/{}'.format(image_path.split('/')[-1]), img)
-        cv2.imshow('Images', img)
+
+
+                text = '{} : {} %'.format(dis[1], round((dis[0] * 100), 1))
+                print(text)
+                size = cv2.getTextSize(text, FONT, 0.55, 2)
+                # Draw a label with a name below the face
+                cv2.rectangle(orig_img, (x1, y2), (x1 + size[0][0] + 6, y2 + size[0][1] + 6), (0, 0, 255),
+                              cv2.FILLED)
+
+                cv2.putText(orig_img, text, (x1 + 6, y2 + size[0][1]), FONT, 0.55, (255, 255, 255), 2)
+
+
+
+
+
+                # print(landmark.shape)
+                # for l in range(landmark5.shape[0]):
+                #     color = (0, 0, 255)
+                #     if l == 0 or l == 3:
+                #         color = (0, 255, 0)
+                #     cv2.circle(img, (landmark5[l][0], landmark5[l][1]), 1, color, 2)
+
+        cv2.imwrite('output_data/{}'.format(image_path.split('/')[-1]), orig_img)
+
+        # print(im_shape)
+        # w, h = im_shape[1], im_shape[0]
+        # if h > 720:
+        #     img = imutils.resize(img, height=720)
+        cv2.imshow('Images', orig_img)
 
         # Hit 'q' on the keyboard to quit!
         cv2.waitKey(0)
