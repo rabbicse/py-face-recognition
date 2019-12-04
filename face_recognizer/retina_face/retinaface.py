@@ -167,7 +167,7 @@ class RetinaFace:
         data = nd.array(im_tensor)
         return data
 
-    def detect(self, img, threshold=0.5, scales=[1.0], do_flip=False):
+    def detect(self, img, threshold=0.5, scales=(1.0), do_flip=False):
         # print('in_detect', threshold, scales, do_flip, do_nms)
         proposals_list = []
         scores_list = []
@@ -455,7 +455,7 @@ class RetinaFace:
             print('C uses', diff.total_seconds(), 'seconds')
         return det, landmarks
 
-    def detect_center(self, img, threshold=0.5, scales=[1.0], do_flip=False):
+    def detect_center(self, img, threshold=0.5, scales=(1.0), do_flip=False):
         det, landmarks = self.detect(img, threshold, scales, do_flip)
         if det.shape[0] == 0:
             return None, None
@@ -695,3 +695,21 @@ class RetinaFace:
                 dets = np.row_stack((dets, det_accu_sum))
         dets = dets[0:750, :]
         return dets
+
+
+    def preprocess(self, img, boxes, landmarks, **kwargs):
+        aligned = []
+        if len(boxes) == len(landmarks):
+
+            for bbox, landmark in zip(boxes, landmarks):
+                margin = kwargs.get('margin', 0)
+                bb = np.zeros(4, dtype=np.int32)
+                bb[0] = np.maximum(bbox[0] - margin / 2, 0)
+                bb[1] = np.maximum(bbox[1] - margin / 2, 0)
+                bb[2] = np.minimum(bbox[2] + margin / 2, img.shape[1])
+                bb[3] = np.minimum(bbox[3] + margin / 2, img.shape[0])
+                ret = img[bb[1]:bb[3], bb[0]:bb[2], :]
+                warped = cv2.resize(ret, (112, 112))
+                aligned.append(warped)
+
+        return aligned
