@@ -11,7 +11,7 @@ from retina_face.rcnn.processing.generate_anchor import generate_anchors_fpn, an
 from retina_face.rcnn.processing.nms import gpu_nms_wrapper, cpu_nms_wrapper
 
 
-class RetinaFace:
+class RetinaFaceU:
     def __init__(self, prefix, epoch, ctx_id=0, network='net3', nms=0.4, nocrop=False, decay4=0.5, vote=False):
         self.ctx_id = ctx_id
         self.network = network
@@ -595,36 +595,39 @@ class RetinaFace:
         if boxes.shape[0] == 0:
             return np.zeros((0, box_deltas.shape[1]))
 
-        boxes = boxes.astype(np.float, copy=False)
-        widths = boxes[:, 2] - boxes[:, 0] + 1.0
-        heights = boxes[:, 3] - boxes[:, 1] + 1.0
-        ctr_x = boxes[:, 0] + 0.5 * (widths - 1.0)
-        ctr_y = boxes[:, 1] + 0.5 * (heights - 1.0)
+        try:
+            boxes = boxes.astype(np.float, copy=False)
+            widths = boxes[:, 2] - boxes[:, 0] + 1.0
+            heights = boxes[:, 3] - boxes[:, 1] + 1.0
+            ctr_x = boxes[:, 0] + 0.5 * (widths - 1.0)
+            ctr_y = boxes[:, 1] + 0.5 * (heights - 1.0)
 
-        dx = box_deltas[:, 0:1]
-        dy = box_deltas[:, 1:2]
-        dw = box_deltas[:, 2:3]
-        dh = box_deltas[:, 3:4]
+            dx = box_deltas[:, 0:1]
+            dy = box_deltas[:, 1:2]
+            dw = box_deltas[:, 2:3]
+            dh = box_deltas[:, 3:4]
 
-        pred_ctr_x = dx * widths[:, np.newaxis] + ctr_x[:, np.newaxis]
-        pred_ctr_y = dy * heights[:, np.newaxis] + ctr_y[:, np.newaxis]
-        pred_w = np.exp(dw) * widths[:, np.newaxis]
-        pred_h = np.exp(dh) * heights[:, np.newaxis]
+            pred_ctr_x = dx * widths[:, np.newaxis] + ctr_x[:, np.newaxis]
+            pred_ctr_y = dy * heights[:, np.newaxis] + ctr_y[:, np.newaxis]
+            pred_w = np.exp(dw) * widths[:, np.newaxis]
+            pred_h = np.exp(dh) * heights[:, np.newaxis]
 
-        pred_boxes = np.zeros(box_deltas.shape)
-        # x1
-        pred_boxes[:, 0:1] = pred_ctr_x - 0.5 * (pred_w - 1.0)
-        # y1
-        pred_boxes[:, 1:2] = pred_ctr_y - 0.5 * (pred_h - 1.0)
-        # x2
-        pred_boxes[:, 2:3] = pred_ctr_x + 0.5 * (pred_w - 1.0)
-        # y2
-        pred_boxes[:, 3:4] = pred_ctr_y + 0.5 * (pred_h - 1.0)
+            pred_boxes = np.zeros(box_deltas.shape)
+            # x1
+            pred_boxes[:, 0:1] = pred_ctr_x - 0.5 * (pred_w - 1.0)
+            # y1
+            pred_boxes[:, 1:2] = pred_ctr_y - 0.5 * (pred_h - 1.0)
+            # x2
+            pred_boxes[:, 2:3] = pred_ctr_x + 0.5 * (pred_w - 1.0)
+            # y2
+            pred_boxes[:, 3:4] = pred_ctr_y + 0.5 * (pred_h - 1.0)
 
-        if box_deltas.shape[1] > 4:
-            pred_boxes[:, 4:] = box_deltas[:, 4:]
+            if box_deltas.shape[1] > 4:
+                pred_boxes[:, 4:] = box_deltas[:, 4:]
 
-        return pred_boxes
+            return pred_boxes
+        except Exception as x:
+            print(x)
 
     @staticmethod
     def landmark_pred(boxes, landmark_deltas):

@@ -1,7 +1,7 @@
 import numpy as np
-# from ..cython import bbox_overlaps_cython
+from ..cython.bbox import bbox_overlaps_cython
 #from rcnn.config import config
-from retina_face.rcnn.cython import *
+
 
 def bbox_overlaps(boxes, query_boxes):
     return bbox_overlaps_cython(boxes, query_boxes)

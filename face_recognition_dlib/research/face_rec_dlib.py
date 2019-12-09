@@ -10,6 +10,7 @@ import numpy as np
 
 SP_PREDICTOR_5_POINT_PATH = 'ml_models/shape_predictor_5_face_landmarks.dat'
 SP_PREDICTOR_68_POINT_PATH = 'ml_models/shape_predictor_68_face_landmarks.dat'
+FACE_DET_MODEL_PATH = 'ml_models/mmod_human_face_detector.dat'
 FACE_REC_MODEL_PATH = 'ml_models/dlib_face_recognition_resnet_model_v1.dat'
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 
@@ -51,7 +52,8 @@ class FaceRecognizer:
     __shape_predictor_5_point = dlib.shape_predictor(SP_PREDICTOR_5_POINT_PATH)
     __shape_predictor_68_point = dlib.shape_predictor(SP_PREDICTOR_68_POINT_PATH)
     __face_rec_model = dlib.face_recognition_model_v1(FACE_REC_MODEL_PATH)
-    __detector = dlib.get_frontal_face_detector()
+    # __detector = dlib.get_frontal_face_detector()
+    __detector = dlib.cnn_face_detection_model_v1(FACE_DET_MODEL_PATH)
     known_face_encodings = []
 
     def __init__(self):
@@ -66,25 +68,29 @@ class FaceRecognizer:
         del self
 
     def __load_face_encodings(self):
-        for img in glob.glob('./train_data/*.jpg'):
-            # Load a sample picture and learn how to recognize it.
-            train_image = dlib.load_rgb_image(img)
+        try:
+            for img in glob.glob('./train_data/*.jpg'):
+                # Load a sample picture and learn how to recognize it.
+                train_image = dlib.load_rgb_image(img)
 
-            # detect all faces
-            detected_faces = self.__detector(train_image, 1)
-            # print("Number of faces detected: {}".format(len(dets)))
+                # detect all faces
+                detected_faces = self.__detector(train_image, 1)
+                print("Number of faces detected: {}".format(len(detected_faces)))
 
-            if len(detected_faces) == 0:
-                continue
+                if len(detected_faces) == 0:
+                    continue
 
-            # Extract landmarks for all trainning images
-            face_chip = self.__extract_landmarks(train_image, detected_faces[0])
+                # Extract landmarks for all trainning images
+                # face_chip = self.__extract_landmarks(train_image, detected_faces[0])
+                face_chip = self.__extract_landmarks(train_image, detected_faces[0].rect)
 
-            # Now we simply pass this chip (aligned image) to the api
-            descriptor_prealigned_image = self.__face_rec_model.compute_face_descriptor(face_chip)
+                # Now we simply pass this chip (aligned image) to the api
+                descriptor_prealigned_image = self.__face_rec_model.compute_face_descriptor(face_chip)
 
-            self.known_face_encodings.append(
-                (np.array(descriptor_prealigned_image), img.split('/')[-1].replace('.jpg', '')))
+                self.known_face_encodings.append(
+                    (np.array(descriptor_prealigned_image), img.split('/')[-1].replace('.jpg', '')))
+        except Exception as x:
+            print(x)
 
     def __extract_landmarks(self, train_image, detected_face):
         # Get the landmarks/parts for the face in box d.
@@ -117,6 +123,11 @@ class FaceRecognizer:
 
         cv2.imwrite('output_data/{}'.format(image_path.split('/')[-1]), img)
 
+        cv2.imshow('Mehmet', img)
+
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
     def process_frames(self, img):
         # get image height and width
         (h, w) = img.shape[:2]
@@ -142,9 +153,12 @@ class FaceRecognizer:
 
         # Now process each face we found.
         for k, d in enumerate(detected_faces):
-            left, top, right, bottom = d.left(), d.top(), d.right(), d.bottom()
 
-            face_chip = self.__extract_landmarks(rgb_img, d)
+            det = d.rect
+
+            left, top, right, bottom = det.left(), det.top(), det.right(), det.bottom()
+
+            face_chip = self.__extract_landmarks(rgb_img, det)
 
             # Now we simply pass this chip (aligned image) to the api
             face_descriptor_from_prealigned_image = self.__face_rec_model.compute_face_descriptor(face_chip)
@@ -190,12 +204,14 @@ def recognize_images():
         for f in glob.glob('./test_data/*.jpg'):
             test_images.append(f)
 
-        # for im in test_images:
-        #     face_rec.process_image(im)
+        for im in test_images:
+            face_rec.process_images(im)
 
         # for i in range(10):
-        with ThreadPool(32) as pool:
-            pool.map(face_rec.process_images, test_images)
+        #     with ThreadPool(32) as pool:
+        #         pool.map(face_rec.process_images, test_images)
+
+        # cv2.destroyAllWindows()
 
 
 def recognize_from_webcam():
@@ -213,5 +229,5 @@ def recognize_from_webcam():
 
 
 if __name__ == '__main__':
-    # recognize_images()
-    recognize_from_webcam()
+    recognize_images()
+    # recognize_from_webcam()
