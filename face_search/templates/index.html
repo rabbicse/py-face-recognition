@@ -1,4 +1,5 @@
-<!doctype html>
+{% load static %}
+
 <html lang="en">
 <head>
     <!-- Required meta tags -->
@@ -59,12 +60,30 @@
 
     <div class="container">
         <!-- Example row of columns -->
-        <form>
-            <div class="form-group">
-                <label for="image">Example file input</label>
-                <input type="file" class="form-control-file" id="image">
+        <!--        <form method="post" enctype="multipart/form-data">-->
+        <!--            <div class="form-group">-->
+        <!--                <label for="image">Example file input</label>-->
+        <!--                <input type="file" class="form-control-file" id="image">-->
+        <!--            </div>-->
+        <!--        </form>-->
+
+
+        <form class="form-inline" method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-group mx-sm-3 mb-2">
+                <input type="file" class="form-control-file" id="image" name="image"/>
             </div>
+            <button type="submit" class="btn btn-primary mb-2"> Upload File</button>
         </form>
+
+        <label for="image" style="cursor:pointer">
+            <!--              <img src="{% static 'img/photo.png' %}" class="img-responsive" />-->
+            {% if uploaded_file_url %}
+            <p>File uploaded at: <a href="{{ uploaded_file_url }}">{{ uploaded_file_url }}</a></p>
+            <img src="{{ uploaded_file_url }}" class="img-responsive" />
+            {% endif %}
+        </label>
+
 
     </div> <!-- /container -->
 
