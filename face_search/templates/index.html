@@ -1,28 +1,69 @@
 {% extends "base.html" %}
 
+{% load static %}
+
 {% block content %}
-        <form class="form-inline" method="POST" enctype="multipart/form-data">
+
+<div class="row justify-content-md-left">
+    <div class="col-md-3">
+        <form class="border p-3" method="POST" action="face/image/" enctype="multipart/form-data">
             {% csrf_token %}
-            <div class="form-group mx-sm-3 mb-2">
-                <input type="file" class="form-control-file" id="image" name="image"/>
+            <div class="input-group mb-3">
+                <div class="custom-file">
+                    <input type="file" class="custom-file-input" id="image" name="image"/>
+                    <label class="custom-file-label" for="image">Choose image file...</label>
+                </div>
+                <div class="input-group-append">
+                    <button class="btn btn-primary">Upload</button>
+                </div>
             </div>
-            <button type="submit" class="btn btn-primary mb-2"> Upload File</button>
+            <label>Example: *.jpg, *.png</label>
         </form>
 
-        <div class="row">
-            <div class="col-md-4">
-                <div class="thumbnail">
-                    <a href="{{ uploaded_file_url }}">
-                        <img alt="picture" src="{{ uploaded_file_url }}" class="img-fluid">
-                    </a>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="thumbnail">
-                    <a href="data:image/png;base64, {{ img_src }}">
-                        <img alt="picture" src="data:image/png;base64, {{ img_src }}" class="img-fluid">
-                    </a>
-                </div>
+
+        {% if uploaded_file_url %}
+        <div class="card">
+            <div class="view overlay bg-dark">
+                <img src="{{ uploaded_file_url }}" class="img-fluid">
             </div>
         </div>
+        {% endif %}
+    </div>
+
+
+    <div class="col-md-6">
+        <!--        <div class="row justify-content-md-left">-->
+        {% if img_src %}
+        <div class="card card-cascade">
+            <div class="view overlay bg-light">
+                <img src="data:image/png;base64, {{ img_src }}" class="card-img-top" alt="Card image cap">
+                <a href="data:image/png;base64, {{ img_src }}">
+                    <div class="mask rgba-white-slight"></div>
+                </a>
+            </div>
+
+
+            <!-- Card content -->
+<!--            <div class="card-body card-body-cascade text-left">-->
+<!--                &lt;!&ndash; Title &ndash;&gt;-->
+<!--                <h4 class="card-title"><strong>Maa</strong></h4>-->
+<!--                &lt;!&ndash; Subtitle &ndash;&gt;-->
+<!--                <h5 class="blue-text pb-2"><strong>Age: 65</strong></h5>-->
+<!--                &lt;!&ndash; Text &ndash;&gt;-->
+<!--                <p class="card-text">Matched 80%</p>-->
+
+<!--            </div>-->
+        </div>
+        {% endif %}
+        <!--        </div>-->
+    </div>
+</div>
+{% endblock %}
+
+<script>
+      bsCustomFileInput.init()
+</script>
+
+{% block javascript %}
+<script src="{% static 'js/image_process.js' %}" crossorigin="anonymous"></script>
 {% endblock %}
