@@ -6,7 +6,8 @@
 
 <div class="row justify-content-md-left">
     <div class="col-md-3">
-        <form class="border p-3" method="POST" action="face/image/" enctype="multipart/form-data">
+        <!--        <form class="border p-3" method="POST" action="face/image/" enctype="multipart/form-data">-->
+        <form class="border p-3" enctype="multipart/form-data" id="imgForm" method="POST">
             {% csrf_token %}
             <div class="input-group mb-3">
                 <div class="custom-file">
@@ -14,20 +15,22 @@
                     <label class="custom-file-label" for="image">Choose image file...</label>
                 </div>
                 <div class="input-group-append">
-                    <button class="btn btn-primary">Upload</button>
+                    <button class="btn btn-primary" id="btnSubmit">Upload</button>
                 </div>
             </div>
             <label>Example: *.jpg, *.png</label>
+            <img id="uploaded_img" class="img-fluid">
         </form>
 
 
-        {% if uploaded_file_url %}
-        <div class="card">
-            <div class="view overlay bg-dark">
-                <img src="{{ uploaded_file_url }}" class="img-fluid">
-            </div>
-        </div>
-        {% endif %}
+        <!--        {% if uploaded_file_url %}-->
+<!--        <div class="card">-->
+<!--            <div class="view overlay bg-dark">-->
+<!--                &lt;!&ndash;                <img src="{{ uploaded_file_url }}" class="img-fluid">&ndash;&gt;-->
+<!--&lt;!&ndash;                <img id="uploaded_img" src="/media/48.jpg" class="img-fluid">&ndash;&gt;-->
+<!--            </div>-->
+<!--        </div>-->
+        <!--        {% endif %}-->
     </div>
 
 
@@ -44,15 +47,15 @@
 
 
             <!-- Card content -->
-<!--            <div class="card-body card-body-cascade text-left">-->
-<!--                &lt;!&ndash; Title &ndash;&gt;-->
-<!--                <h4 class="card-title"><strong>Maa</strong></h4>-->
-<!--                &lt;!&ndash; Subtitle &ndash;&gt;-->
-<!--                <h5 class="blue-text pb-2"><strong>Age: 65</strong></h5>-->
-<!--                &lt;!&ndash; Text &ndash;&gt;-->
-<!--                <p class="card-text">Matched 80%</p>-->
+            <!--            <div class="card-body card-body-cascade text-left">-->
+            <!--                &lt;!&ndash; Title &ndash;&gt;-->
+            <!--                <h4 class="card-title"><strong>Maa</strong></h4>-->
+            <!--                &lt;!&ndash; Subtitle &ndash;&gt;-->
+            <!--                <h5 class="blue-text pb-2"><strong>Age: 65</strong></h5>-->
+            <!--                &lt;!&ndash; Text &ndash;&gt;-->
+            <!--                <p class="card-text">Matched 80%</p>-->
 
-<!--            </div>-->
+            <!--            </div>-->
         </div>
         {% endif %}
         <!--        </div>-->
@@ -60,10 +63,11 @@
 </div>
 {% endblock %}
 
+{% block javascript %}
 <script>
       bsCustomFileInput.init()
-</script>
 
-{% block javascript %}
+
+</script>
 <script src="{% static 'js/image_process.js' %}" crossorigin="anonymous"></script>
 {% endblock %}
