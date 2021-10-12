@@ -14,7 +14,7 @@ mxnet-cu100mkl==1.5.1.post0
 networkx==2.4
 numpy==1.17.4
 object-detection==0.1
-opencv-python==4.1.2.30
+opencv-python==4.2.0.32
 Pillow==6.2.1
 pkg-resources==0.0.0
 pyparsing==2.4.5
